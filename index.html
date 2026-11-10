@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1557a6">
+<link rel="manifest" href="manifest.json">
+<title>شمارشگر بارکد کالا</title>
+<style>
+:root{font-family:Tahoma,"Segoe UI",sans-serif;color:#172033;background:#f2f5fa}
+*{box-sizing:border-box}body{margin:0}header{background:#1557a6;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 2px 10px #0002}
+h1{font-size:20px;margin:0}header small{opacity:.85}.wrap{max-width:1200px;margin:20px auto;padding:0 14px}
+.panel{background:#fff;border:1px solid #d9e1ed;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #1c35550a}
+.controls{display:grid;grid-template-columns:minmax(220px,1.5fr) auto auto;gap:10px;align-items:end}
+label{display:block;font-size:13px;color:#526176;margin-bottom:7px}
+input,button{font:inherit}input[type=text],input[type=number]{width:100%;padding:13px;border:1px solid #b9c6d8;border-radius:9px;background:#fff;min-width:0}
+button,.filebtn{border:0;border-radius:9px;padding:12px 16px;background:#1557a6;color:#fff;cursor:pointer;font-weight:600;min-height:46px}
+button.secondary,.filebtn{background:#e8eef7;color:#173b68;border:1px solid #cbd7e7}
+button.green{background:#13834c}button.red{background:#a93636}button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+.tools{display:flex;gap:8px;flex-wrap:wrap}.tools button,.tools .filebtn{flex:1;text-align:center}
+input[type=file]{display:none}.hint{font-size:12px;color:#68778b;line-height:1.8;margin-top:8px}
+table{width:100%;border-collapse:collapse;min-width:570px}th{background:#1557a6;color:white;text-align:right;padding:12px}td{padding:10px 12px;border-bottom:1px solid #e4e9f0}tr:nth-child(even){background:#f8faff}
+.tablewrap{overflow-x:auto}.qty{display:flex;align-items:center;gap:6px;justify-content:flex-start}.qty button{min-height:34px;padding:5px 11px}.qty strong{min-width:28px;text-align:center}
+.summary{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:bold}
+.status{font-size:12px;color:#53657d}.empty{text-align:center;padding:28px;color:#718096}
+#cameraBox{display:none;margin-top:12px}video{width:100%;max-height:300px;background:#111;border-radius:10px}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:5;align-items:center;justify-content:center;padding:16px}.modal.open{display:flex}.dialog{background:white;padding:20px;border-radius:14px;width:min(440px,100%)}
+.dialog input{margin-bottom:12px}.dialog h3{margin-top:0}
+@media(max-width:700px){header{padding:14px}h1{font-size:17px}.wrap{margin:12px auto;padding:0 10px}.panel{padding:12px}.controls{grid-template-columns:1fr 1fr}.controls .searchfield{grid-column:1/-1}.controls button{width:100%}.tools button,.tools .filebtn{min-width:42%}.summary{font-size:14px}}
+</style>
+</head>
+<body>
+<header><div><h1>▥ شمارشگر بارکد کالا</h1><small>ثبت، جست‌وجو و شمارش کالاها</small></div><span>نسخه وب</span></header>
+<main class="wrap">
+<section class="panel">
+ <div class="controls">
+  <div class="searchfield"><label for="barcode">بارکد کالا</label><input id="barcode" type="text" inputmode="numeric" autocomplete="off" placeholder="بارکد را اسکن یا وارد کنید"></div>
+  <button id="addCount" class="green">＋ ثبت / افزایش تعداد</button>
+  <button id="openAdd">＋ تعریف کالای جدید</button>
+ </div>
+ <div class="row" style="margin-top:10px">
+  <button id="cameraBtn" class="secondary">📷 اسکن با دوربین</button>
+  <button id="stopCamera" class="secondary" disabled>توقف دوربین</button>
+ </div>
+ <div id="cameraBox"><video id="video" playsinline></video><div class="hint" id="cameraHint">دوربین را روبه‌روی بارکد بگیرید.</div></div>
+ <div class="hint">بارکدخوان USB مانند صفحه‌کلید عمل می‌کند: بارکد را اسکن کنید؛ با Enter تعداد یک واحد افزایش می‌یابد.</div>
+</section>
+<section class="panel">
+ <div class="tools">
+  <label class="filebtn" for="excelFile">📂 انتخاب فایل Excel / CSV</label><input id="excelFile" type="file" accept=".xlsx,.xls,.csv">
+  <button id="exportBtn" class="secondary">⬇ خروجی Excel</button>
+  <button id="exportCsv" class="secondary">⬇ خروجی CSV</button>
+  <button id="newSession" class="secondary">شروع شمارش جدید</button>
+  <button id="clearAll" class="red">پاک‌کردن بانک کالا</button>
+ </div>
+ <div class="hint">ساختار فایل ورودی: دو ستون با عنوان «بارکد» و «نام کالا». اگر عنوان نداشته باشد، ستون اول بارکد و ستون دوم نام کالا در نظر گرفته می‌شود. فایل اصلی روی همین دستگاه ذخیره می‌شود.</div>
+</section>
+<section class="panel">
+ <div class="row" style="margin-bottom:12px"><div><label for="filter">جست‌وجو در فهرست</label><input id="filter" type="text" placeholder="نام کالا یا بارکد..."></div></div>
+ <div class="tablewrap"><table><thead><tr><th>نام کالا</th><th>بارکد</th><th>تعداد شمارش‌شده</th><th>عملیات</th></tr></thead><tbody id="items"><tr><td colspan="4" class="empty">هنوز کالایی ثبت نشده است.</td></tr></tbody></table></div>
+ <div class="summary" style="margin-top:14px"><span id="productTotal">تعداد اقلام: ۰</span><span id="countTotal">مجموع تعداد: ۰</span></div>
+ <div class="status" id="status" aria-live="polite">اطلاعات به‌صورت خودکار در این دستگاه ذخیره می‌شود.</div>
+</section>
+</main>
+<div class="modal" id="modal"><div class="dialog">
+<h3>تعریف کالای جدید</h3>
+<label for="newBarcode">بارکد</label><input id="newBarcode" type="text" placeholder="مثلاً 6261234567890">
+<label for="newName">نام کالا</label><input id="newName" type="text" placeholder="نام محصول">
+<div class="row"><button id="saveProduct" class="green">ذخیره کالا</button><button id="cancelModal" class="secondary">انصراف</button></div>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let products=JSON.parse(localStorage.getItem('barcode_products_v1')||'{}');
+let counts=JSON.parse(localStorage.getItem('barcode_counts_v1')||'{}');
+const save=()=>{localStorage.setItem('barcode_products_v1',JSON.stringify(products));localStorage.setItem('barcode_counts_v1',JSON.stringify(counts));};
+const fmt=n=>Number(n||0).toLocaleString('fa-IR');
+function say(msg){$('status').textContent=msg}
+function render(){
+ const q=$('filter').value.trim().toLowerCase(), body=$('items');body.innerHTML='';
+ const keys=Object.keys(products).filter(k=>(k+' '+products[k]).toLowerCase().includes(q)).sort((a,b)=>products[a].localeCompare(products[b],'fa'));
+ if(!keys.length){body.innerHTML='<tr><td colspan="4" class="empty">موردی پیدا نشد.</td></tr>'}
+ keys.forEach(code=>{const tr=document.createElement('tr');
+ const name=document.createElement('td');name.textContent=products[code];
+ const bc=document.createElement('td');bc.textContent=code;
+ const qty=document.createElement('td');const wrap=document.createElement('div');wrap.className='qty';
+ const minus=document.createElement('button');minus.textContent='−';minus.className='secondary';minus.onclick=()=>change(code,-1);
+ const value=document.createElement('strong');value.textContent=fmt(counts[code]||0);
+ const plus=document.createElement('button');plus.textContent='＋';plus.className='green';plus.onclick=()=>change(code,1);
+ wrap.append(minus,value,plus);qty.append(wrap);
+ const actions=document.createElement('td');const edit=document.createElement('button');edit.textContent='ویرایش';edit.className='secondary';edit.onclick=()=>editProduct(code);
+ const del=document.createElement('button');del.textContent='حذف';del.className='red';del.style.marginRight='5px';del.onclick=()=>deleteProduct(code);actions.append(edit,del);
+ tr.append(name,bc,qty,actions);body.append(tr);
+ });
+ $('productTotal').textContent='تعداد اقلام: '+fmt(Object.keys(products).length);
+ $('countTotal').textContent='مجموع تعداد: '+fmt(Object.values(counts).reduce((a,b)=>a+Number(b||0),0));
+}
+function change(code,delta){counts[code]=Math.max(0,(Number(counts[code])||0)+delta);save();render()}
+function addScanned(){
+ const code=$('barcode').value.trim();if(!code)return;
+ if(!products[code]){$('newBarcode').value=code;$('newName').value='';$('modal').classList.add('open');say('این بارکد در بانک کالا نیست؛ نام کالا را ثبت کنید.');return}
+ change(code,1);say('یک عدد به «'+products[code]+'» اضافه شد.');$('barcode').value='';$('barcode').focus();
+}
+$('addCount').onclick=addScanned;$('barcode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addScanned()}});
+$('filter').oninput=render;
+$('openAdd').onclick=()=>{$('newBarcode').value=$('barcode').value.trim();$('newName').value='';$('modal').classList.add('open')};
+$('cancelModal').onclick=()=>$('modal').classList.remove('open');
+$('saveProduct').onclick=()=>{const c=$('newBarcode').value.trim(),n=$('newName').value.trim();if(!c||!n){alert('بارکد و نام کالا را وارد کنید.');return}products[c]=n;counts[c]=counts[c]||0;save();render();$('modal').classList.remove('open');$('barcode').value='';say('کالا ذخیره شد.')};
+function editProduct(c){const n=prompt('نام جدید کالا:',products[c]);if(n===null)return;if(!n.trim())return alert('نام کالا نمی‌تواند خالی باشد.');products[c]=n.trim();save();render()}
+function deleteProduct(c){if(!confirm('این کالا و تعداد شمارش‌شده آن حذف شود؟'))return;delete products[c];delete counts[c];save();render();say('کالا حذف شد.')}
+$('clearAll').onclick=()=>{if(!confirm('تمام کالاها و تعدادها از این دستگاه پاک شوند؟'))return;products={};counts={};save();render();say('بانک کالا پاک شد.')};
+$('newSession').onclick=()=>{if(!confirm('فقط تعدادهای شمارش‌شده صفر شوند؟ بانک کالا باقی می‌ماند.'))return;counts={};save();render();say('شمارش جدید آغاز شد.')};
+function exportRows(){return [['بارکد','نام کالا','تعداد'],...Object.keys(products).map(c=>[c,products[c],Number(counts[c]||0)])]}
+$('exportBtn').onclick=()=>{if(!window.XLSX)return alert('کتابخانه Excel بارگذاری نشده؛ اتصال اینترنت را بررسی کنید.');const ws=XLSX.utils.aoa_to_sheet(exportRows());const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'شمارش کالا');XLSX.writeFile(wb,'گزارش-شمارش-کالا.xlsx')};
+$('exportCsv').onclick=()=>downloadCsv(exportRows(),'گزارش-شمارش-کالا.csv');
+function downloadCsv(rows,name){const csv='\uFEFF'+rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('excelFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{let rows;if(file.name.toLowerCase().endsWith('.csv')){const text=await file.text();rows=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(Boolean).map(line=>line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"')))}else{if(!window.XLSX)throw Error('برای خواندن فایل Excel باید اینترنت وصل باشد تا کتابخانه بارگذاری شود.');const data=await file.arrayBuffer();const wb=XLSX.read(data);rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''})}
+ if(!rows.length)throw Error('فایل خالی است.');let start=0,bi=0,ni=1;
+ const h=rows[0].map(x=>String(x).trim().toLowerCase());const b=h.findIndex(x=>x.includes('بارکد')||x.includes('barcode'));const n=h.findIndex(x=>x.includes('نام')||x.includes('name')||x.includes('کالا'));if(b>=0&&n>=0){bi=b;ni=n;start=1}
+ let added=0,updated=0;for(let i=start;i<rows.length;i++){const code=String(rows[i][bi]??'').trim(),name=String(rows[i][ni]??'').trim();if(!code||!name)continue;if(products[code])updated++;else added++;products[code]=name;counts[code]=counts[code]||0}
+ save();render();say(`${added} کالای جدید وارد شد؛ ${updated} کالای موجود به‌روزرسانی شد.`);alert('ورود اطلاعات انجام شد.');}catch(err){alert('خطا در خواندن فایل: '+err.message)}finally{e.target.value=''}};
+let stream=null,detector=null,scanLoop=false;
+$('cameraBtn').onclick=async()=>{if(!navigator.mediaDevices?.getUserMedia)return alert('مرورگر یا اتصال امن از دوربین پشتیبانی نمی‌کند.');if(!('BarcodeDetector'in window))return alert('این مرورگر اسکن بارکد را پشتیبانی نمی‌کند. از Chrome یا Edge به‌روز استفاده کنید یا بارکد را دستی/با بارکدخوان وارد کنید.');try{detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('video').srcObject=stream;await $('video').play();$('cameraBox').style.display='block';$('stopCamera').disabled=false;$('cameraBtn').disabled=true;scanLoop=true;scanFrame()}catch(err){alert('دسترسی دوربین ممکن نشد: '+err.message)}};
+async function scanFrame(){if(!scanLoop)return;try{const codes=await detector.detect($('video'));if(codes.length){$('barcode').value=codes[0].rawValue;stopCamera();addScanned();return}}catch(e){}requestAnimationFrame(scanFrame)}
+function stopCamera(){scanLoop=false;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('cameraBox').style.display='none';$('stopCamera').disabled=true;$('cameraBtn').disabled=false}
+$('stopCamera').onclick=stopCamera;
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
+</script>
+</body></html>
